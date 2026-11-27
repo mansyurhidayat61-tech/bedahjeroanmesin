@@ -1,0 +1,2677 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Bedah Jeroan Mesin: Simulasi Interaktif 2 Tak & 4 Tak – SMK TKR</title>
+  <style>
+    /* ==========================================================================
+       DESIGN TOKENS & TEMA BENGKEL OTOMOTIF MODERN (SLATE GELAP KONTRAS TINGGI)
+       ========================================================================== */
+    :root {
+      --bg-app: #0b1120;
+      --bg-panel: #131c31;
+      --bg-card: #1a253c;
+      --bg-card-hover: #22304d;
+      --border-subtle: #2b3a58;
+      --border-strong: #3e527a;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      /* Kode Warna Teknis Siklus Motor Bakar */
+      --gas-intake: #06b6d4;      /* Cyan: Campuran Udara + BB Segar */
+      --gas-intake-bg: rgba(6, 182, 212, 0.16);
+      --gas-comp: #f59e0b;        /* Amber/Oranye: Kompresi Tinggi */
+      --gas-comp-bg: rgba(245, 158, 11, 0.18);
+      --gas-power: #ef4444;       /* Merah/Api: Pembakaran & Ekspansi Daya */
+      --gas-power-bg: rgba(239, 68, 68, 0.18);
+      --gas-exhaust: #94a3b8;     /* Abu-abu: Gas Buang */
+      --gas-exhaust-bg: rgba(148, 163, 184, 0.16);
+
+      --accent-orange: #f97316;
+      --accent-cyan: #0ea5e9;
+      --status-ok: #10b981;
+      --status-ok-bg: rgba(16, 185, 129, 0.16);
+      --status-warn: #f59e0b;
+      --status-err: #ef4444;
+
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-app);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    button:focus-visible, input:focus-visible {
+      outline: 3px solid var(--accent-orange);
+      outline-offset: 2px;
+    }
+
+    /* ==========================================================================
+       HEADER & BAR NAVIGASI GLOBAL
+       ========================================================================== */
+    .topbar {
+      background: linear-gradient(180deg, #162038 0%, #11192c 100%);
+      border-bottom: 2px solid var(--border-subtle);
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .topbar-inner {
+      max-width: 1380px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+    }
+
+    .brand-text h1 {
+      margin: 0;
+      font-size: clamp(1.05rem, 2.1vw, 1.38rem);
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+    }
+
+    .brand-subrow {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .brand-subrow span {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .kurikulum-badge {
+      background: rgba(14, 165, 233, 0.16);
+      border: 1px solid rgba(14, 165, 233, 0.45);
+      color: #38bdf8;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .utility-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .util-btn {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 8px 13px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+    }
+
+    .util-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-cyan);
+    }
+
+    .util-btn.active {
+      background: rgba(6, 182, 212, 0.18);
+      border-color: var(--gas-intake);
+      color: #67e8f9;
+    }
+
+    /* ==========================================================================
+       NAVIGASI 3 TAB UTAMA
+       ========================================================================== */
+    .workspace {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 16px 18px 44px;
+    }
+
+    .main-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+      background: var(--bg-panel);
+      padding: 6px;
+      border-radius: var(--radius-lg);
+      border: 1.5px solid var(--border-subtle);
+    }
+
+    @media (max-width: 920px) {
+      .main-tabs {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .main-tabs {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1.5px solid transparent;
+      color: var(--text-secondary);
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.96rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-color: #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+    }
+
+    .tab-view {
+      display: none;
+    }
+
+    .tab-view.active {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==========================================================================
+       TAB 1: SIMULASI SIKLUS CUTAWAY INTERAKTIF
+       ========================================================================== */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .sim-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel-box {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .engine-selector-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .engine-toggle-group {
+      display: inline-flex;
+      background: var(--bg-app);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border-subtle);
+      gap: 4px;
+    }
+
+    .eng-choice-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 9px 16px;
+      border-radius: 9px;
+      font-weight: 800;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .eng-choice-btn.active {
+      background: var(--accent-orange);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(249, 115, 22, 0.35);
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      background: radial-gradient(circle at 50% 35%, #17233b 0%, #0a101d 100%);
+      border: 2px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    canvas.engine-canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .legend-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+    }
+
+    .dot-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Panel Kontrol Kinematika */
+    .kinematics-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    .control-buttons-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .ctrl-btn {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.16s ease;
+    }
+
+    .ctrl-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-cyan);
+    }
+
+    .ctrl-btn.primary-play {
+      background: var(--status-ok);
+      border-color: #34d399;
+      color: #042f2e;
+      min-width: 112px;
+      justify-content: center;
+    }
+
+    .ctrl-btn.primary-play.paused {
+      background: var(--accent-orange);
+      border-color: #fb923c;
+      color: #ffffff;
+    }
+
+    .speed-group {
+      margin-left: auto;
+      display: inline-flex;
+      background: var(--bg-app);
+      padding: 3px;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .speed-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 6px 10px;
+      border-radius: 7px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .speed-btn.active {
+      background: var(--accent-cyan);
+      color: #082f49;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.86rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+    }
+
+    .crank-angle-readout {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #38bdf8;
+      background: rgba(14, 165, 233, 0.14);
+      padding: 2px 10px;
+      border-radius: 6px;
+    }
+
+    input[type="range"].crank-slider {
+      width: 100%;
+      accent-color: var(--accent-orange);
+      height: 10px;
+      cursor: pointer;
+    }
+
+    /* Step Pills untuk 4 Tak & 2 Tak */
+    .stroke-pills {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .stroke-pills.two-stroke {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stroke-pill {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 8px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .stroke-pill strong {
+      display: block;
+      font-size: 0.86rem;
+      color: var(--text-primary);
+    }
+
+    .stroke-pill span {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+    }
+
+    .stroke-pill.active-intake {
+      background: var(--gas-intake-bg);
+      border-color: var(--gas-intake);
+    }
+    .stroke-pill.active-comp {
+      background: var(--gas-comp-bg);
+      border-color: var(--gas-comp);
+    }
+    .stroke-pill.active-power {
+      background: var(--gas-power-bg);
+      border-color: var(--gas-power);
+    }
+    .stroke-pill.active-exhaust {
+      background: var(--gas-exhaust-bg);
+      border-color: var(--gas-exhaust);
+    }
+
+    /* Telemetri Real-Time */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .tele-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .tele-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      font-weight: 700;
+    }
+
+    .tele-val {
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-top: 3px;
+    }
+
+    .pressure-bar-track {
+      width: 100%;
+      height: 12px;
+      background: var(--bg-app);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .pressure-bar-fill {
+      height: 100%;
+      width: 20%;
+      background: linear-gradient(90deg, #06b6d4, #f59e0b, #ef4444);
+      transition: width 0.08s linear;
+    }
+
+    .phase-explanation-card {
+      background: var(--bg-card);
+      border-left: 5px solid var(--accent-cyan);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .phase-explanation-card h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      color: #ffffff;
+    }
+
+    .phase-explanation-card p {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================================================
+       TAB 2: PERBANDINGAN SIDE-BY-SIDE (4 TAK VS 2 TAK)
+       ========================================================================== */
+    .compare-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      background: var(--bg-panel);
+      padding: 14px 18px;
+      border-radius: var(--radius-lg);
+      border: 1.5px solid var(--border-subtle);
+    }
+
+    .side-by-side-canvases {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 860px) {
+      .side-by-side-canvases {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .compare-engine-card {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+
+    .compare-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .compare-card-head h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .cycle-counter-pill {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(239, 68, 68, 0.16);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+
+    /* Tabel Matriks Perbandingan */
+    .matrix-table-wrap {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+    }
+
+    table.tech-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+    }
+
+    table.tech-matrix th, table.tech-matrix td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.92rem;
+    }
+
+    table.tech-matrix th {
+      background: var(--bg-card);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+
+    table.tech-matrix tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* ==========================================================================
+       TAB 3: LAB DIAGNOSTIK GANGGUAN & KUIS UJI KOMPETENSI TKR
+       ========================================================================== */
+    .lab-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 14px;
+    }
+
+    .lab-section-title h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #ffffff;
+    }
+
+    .case-selector-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 760px) {
+      .case-selector-tabs {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .case-tab-btn {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 12px 14px;
+      border-radius: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .case-tab-btn.active {
+      background: var(--bg-card);
+      border-color: var(--accent-orange);
+      color: #ffffff;
+    }
+
+    .case-workspace {
+      display: grid;
+      grid-template-columns: 0.95fr 1.15fr;
+      gap: 18px;
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      margin-bottom: 26px;
+    }
+
+    @media (max-width: 900px) {
+      .case-workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .symptom-alert {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1.5px solid rgba(239, 68, 68, 0.45);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+
+    .symptom-alert strong {
+      color: #fca5a5;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .diag-option-btn {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 13px 15px;
+      border-radius: 11px;
+      text-align: left;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 9px;
+      transition: all 0.18s ease;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .diag-option-btn:hover:not(:disabled) {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-cyan);
+    }
+
+    .diag-option-btn.correct {
+      background: var(--status-ok-bg);
+      border-color: var(--status-ok);
+      color: #6ee7b7;
+    }
+
+    .diag-option-btn.wrong {
+      background: rgba(239, 68, 68, 0.16);
+      border-color: var(--status-err);
+      color: #fca5a5;
+    }
+
+    .diag-feedback {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .diag-feedback.ok {
+      background: var(--status-ok-bg);
+      border: 1.5px solid var(--status-ok);
+      color: #d1fae5;
+    }
+
+    .diag-feedback.err {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1.5px solid var(--status-warn);
+      color: #fef3c7;
+    }
+
+    /* Kuis Uji Kompetensi Visual */
+    .quiz-container {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .quiz-item-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .quiz-item-card h4 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      color: #ffffff;
+    }
+
+    .quiz-choices-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 680px) {
+      .quiz-choices-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .quiz-choice-label {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .quiz-choice-label:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .quiz-choice-label.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(14, 165, 233, 0.14);
+    }
+
+    .quiz-choice-label.eval-correct {
+      border-color: var(--status-ok);
+      background: var(--status-ok-bg);
+      color: #6ee7b7;
+    }
+
+    .quiz-choice-label.eval-wrong {
+      border-color: var(--status-err);
+      background: rgba(239, 68, 68, 0.16);
+      color: #fca5a5;
+    }
+
+    .quiz-rationale {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.7);
+      border-left: 4px solid var(--accent-cyan);
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+    }
+
+    .score-summary-box {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border: 2px solid var(--accent-cyan);
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    /* ==========================================================================
+       TAB 4: TENTANG MEDIA (PROFIL, KURIKULUM, PANDUAN & IDENTITAS)
+       ========================================================================== */
+    .about-hero {
+      background: linear-gradient(135deg, #16223b 0%, #11192c 100%);
+      border: 1.5px solid var(--border-strong);
+      border-left: 6px solid var(--accent-orange);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .about-hero h2 {
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+      color: #ffffff;
+    }
+
+    .about-hero p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      max-width: 92ch;
+    }
+
+    .about-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .about-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .about-card {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .about-card h3 {
+      margin: 0 0 12px;
+      font-size: 1.12rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .about-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-secondary);
+      font-size: 0.91rem;
+    }
+
+    .about-list li {
+      margin-bottom: 8px;
+    }
+
+    .about-list strong {
+      color: var(--text-primary);
+    }
+
+    .color-code-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 560px) {
+      .color-code-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .color-code-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+
+    .color-code-swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .meeting-compact-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.88rem;
+    }
+
+    .meeting-compact-table th,
+    .meeting-compact-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .meeting-compact-table th {
+      background: var(--bg-card);
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .meeting-compact-table td {
+      color: var(--text-secondary);
+    }
+
+    .dev-credit-strip {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .dev-badge {
+      background: rgba(249, 115, 22, 0.16);
+      border: 1px solid rgba(249, 115, 22, 0.5);
+      color: #fdba74;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    /* ==========================================================================
+       MODAL CP / TP KURIKULUM MERDEKA SMK TKR
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 8, 17, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: var(--bg-panel);
+      border: 2px solid var(--border-strong);
+      border-radius: 18px;
+      max-width: 680px;
+      width: 100%;
+      padding: 24px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-dialog h2 {
+      margin: 0 0 10px;
+      color: #38bdf8;
+      font-size: 1.3rem;
+    }
+
+    .cp-list {
+      padding-left: 20px;
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+    }
+
+    .cp-list li {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       HEADER & UTILITAS GLOBAL
+       ======================================================================== -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-group">
+        <div class="brand-emblem" aria-hidden="true">
+          <!-- Ikon Piston & Poros Engkol -->
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <rect x="7" y="4" width="18" height="11" rx="2.5" fill="#FFFFFF"/>
+            <line x1="7" y1="8" x2="25" y2="8" stroke="#EA580C" stroke-width="2"/>
+            <line x1="7" y1="11.5" x2="25" y2="11.5" stroke="#EA580C" stroke-width="2"/>
+            <path d="M16 15L16 23" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="16" cy="24.5" r="4.5" stroke="#FFFFFF" stroke-width="3"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Bedah Jeroan Mesin: Simulasi Interaktif 2 Tak &amp; 4 Tak</h1>
+          <div class="brand-subrow">
+            <span>Lab Siklus, Perbandingan &amp; Diagnostik Gangguan</span>
+            <span class="kurikulum-badge">SMK TKR • Fase E–F</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="utility-group">
+        <button type="button" class="util-btn active" id="btnToggleLabels" onclick="toggleComponentLabels()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+            <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+          <span id="labelToggleText">Label Komponen: ON</span>
+        </button>
+
+        <button type="button" class="util-btn" onclick="openCpModal()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <span>CP &amp; TP TKR</span>
+        </button>
+
+        <button type="button" class="util-btn" onclick="toggleFullscreen()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+          <span>Layar Penuh</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       WORKSPACE UTAMA (3 TAB)
+       ======================================================================== -->
+  <main class="workspace">
+    <nav class="main-tabs" role="tablist" aria-label="Mode Pembelajaran">
+      <button type="button" class="tab-btn active" id="tabBtn-sim" onclick="switchTab('sim')">
+        <span>1. Simulasi Siklus Cutaway</span>
+      </button>
+      <button type="button" class="tab-btn" id="tabBtn-compare" onclick="switchTab('compare')">
+        <span>2. Perbandingan Side-by-Side (4T vs 2T)</span>
+      </button>
+      <button type="button" class="tab-btn" id="tabBtn-lab" onclick="switchTab('lab')">
+        <span>3. Lab Diagnostik Gangguan &amp; Kuis</span>
+      </button>
+      <button type="button" class="tab-btn" id="tabBtn-about" onclick="switchTab('about')">
+        <span>4. Tentang Media</span>
+      </button>
+    </nav>
+
+    <!-- ======================================================================
+         TAB 1: SIMULASI SIKLUS CUTAWAY INTERAKTIF (SINGLE VIEW)
+         ====================================================================== -->
+    <section id="view-sim" class="tab-view active">
+      <div class="sim-grid">
+        <!-- Kolom Kiri: Canvas Potongan Mesin -->
+        <div class="panel-box">
+          <div class="engine-selector-bar">
+            <div class="engine-toggle-group" role="group" aria-label="Pilih Tipe Motor Bakar">
+              <button type="button" class="eng-choice-btn active" id="btnSelect4T" onclick="setSingleEngine('4T')">
+                Motor 4 Tak (720°)
+              </button>
+              <button type="button" class="eng-choice-btn" id="btnSelect2T" onclick="setSingleEngine('2T')">
+                Motor 2 Tak (360°)
+              </button>
+            </div>
+            <span style="font-size:0.82rem; color:var(--text-secondary); font-weight:700;" id="cycleRatioHint">
+              1 Siklus = 2 Putaran Poros Engkol
+            </span>
+          </div>
+
+          <div class="canvas-wrapper">
+            <canvas id="singleEngineCanvas" class="engine-canvas" width="640" height="620"></canvas>
+          </div>
+
+          <div class="legend-strip">
+            <span class="legend-item"><span class="dot-swatch" style="background:var(--gas-intake);"></span>Campuran Udara + BB Segar</span>
+            <span class="legend-item"><span class="dot-swatch" style="background:var(--gas-comp);"></span>Kompresi Tinggi</span>
+            <span class="legend-item"><span class="dot-swatch" style="background:var(--gas-power);"></span>Pembakaran &amp; Daya</span>
+            <span class="legend-item"><span class="dot-swatch" style="background:var(--gas-exhaust);"></span>Gas Buang (Exhaust)</span>
+          </div>
+        </div>
+
+        <!-- Kolom Kanan: Kontrol Kinematika & Telemetri Real-Time -->
+        <div class="panel-box">
+          <!-- Kontrol Putaran -->
+          <div class="kinematics-card">
+            <div class="control-buttons-row">
+              <button type="button" class="ctrl-btn primary-play" id="btnSinglePlay" onclick="toggleSinglePlay()">
+                ⏸ Jeda
+              </button>
+              <button type="button" class="ctrl-btn" onclick="stepSingleAngle(-15)">
+                ⏪ -15°
+              </button>
+              <button type="button" class="ctrl-btn" onclick="stepSingleAngle(15)">
+                +15° ⏩
+              </button>
+
+              <div class="speed-group" aria-label="Kecepatan Animasi">
+                <button type="button" class="speed-btn" id="spd-0.25" onclick="setSingleSpeed(0.25)">0.25x</button>
+                <button type="button" class="speed-btn active" id="spd-0.5" onclick="setSingleSpeed(0.5)">0.5x</button>
+                <button type="button" class="speed-btn" id="spd-1" onclick="setSingleSpeed(1)">1x</button>
+              </div>
+            </div>
+
+            <div class="slider-header">
+              <span>Sudut Poros Engkol (Crankshaft Angle)</span>
+              <span class="crank-angle-readout" id="singleAngleReadout">0° / 720°</span>
+            </div>
+            <input type="range" class="crank-slider" id="singleAngleSlider" min="0" max="720" step="1" value="0" oninput="onSingleSliderInput(this.value)" />
+          </div>
+
+          <!-- Tombol Lompat Cepat ke Langkah -->
+          <div id="strokePillsContainer" class="stroke-pills"></div>
+
+          <!-- Telemetri Mekanis Real-Time -->
+          <div class="telemetry-grid">
+            <div class="tele-box">
+              <div class="tele-label">Langkah / Fase Aktif</div>
+              <div class="tele-val" id="telePhaseName">1. Langkah Hisap (Intake)</div>
+            </div>
+            <div class="tele-box">
+              <div class="tele-label">Arah Gerak Torak (Piston)</div>
+              <div class="tele-val" id="telePistonDir">Turun (TMA ➔ TMB)</div>
+            </div>
+            <div class="tele-box">
+              <div class="tele-label" id="teleValveLabel">Status Katup (Valve)</div>
+              <div class="tele-val" id="teleValveStatus" style="font-size:0.88rem;">Intake: BUKA | Exhaust: TUTUP</div>
+            </div>
+            <div class="tele-box">
+              <div class="tele-label">Tekanan Ruang Bakar (Relatif)</div>
+              <div class="tele-val" id="telePressureText">Rendah (~0.9 bar)</div>
+              <div class="pressure-bar-track">
+                <div class="pressure-bar-fill" id="telePressureBar"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Penjelasan Teknis Fase Aktif -->
+          <div class="phase-explanation-card" id="phaseExplanationCard">
+            <h3 id="phaseExpTitle">Langkah Hisap (0° – 180°)</h3>
+            <p id="phaseExpBody">
+              Poros engkol berputar menarik torak bergerak dari Titik Mati Atas (TMA) menuju Titik Mati Bawah (TMB). Katup isap (intake) terbuka dan katup buang (exhaust) tertutup rapat sehingga kevakuman silinder menghisap campuran udara dan bahan bakar masuk ke ruang bakar.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 2: PERBANDINGAN SIDE-BY-SIDE (4 TAK VS 2 TAK)
+         ====================================================================== -->
+    <section id="view-compare" class="tab-view">
+      <div class="compare-controls">
+        <div>
+          <strong style="font-size:1.05rem; color:#ffffff;">Simulasi Sinkron Kecepatan Sudut Poros Engkol (RPM Sama)</strong>
+          <div style="font-size:0.85rem; color:var(--text-secondary);">
+            Amati bahwa dalam 2 putaran poros engkol (720°), Motor 4 Tak menghasilkan <strong>1x langkah usaha</strong> sedangkan Motor 2 Tak menghasilkan <strong>2x langkah usaha</strong>.
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ctrl-btn primary-play" id="btnComparePlay" onclick="toggleComparePlay()">
+            ⏸ Jeda
+          </button>
+          <button type="button" class="ctrl-btn" onclick="resetCompareCounters()">
+            ↺ Reset Hitungan Siklus
+          </button>
+        </div>
+      </div>
+
+      <div class="side-by-side-canvases">
+        <!-- Kiri: Motor 4 Tak -->
+        <div class="compare-engine-card">
+          <div class="compare-card-head">
+            <h3 style="color:#38bdf8;">Motor 4 Tak (4-Stroke)</h3>
+            <span class="cycle-counter-pill" id="powerCount4T">Langkah Usaha: 0x</span>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="compareCanvas4T" class="engine-canvas" width="520" height="480"></canvas>
+          </div>
+          <div style="margin-top:10px; font-size:0.88rem; font-weight:700; color:var(--text-secondary);" id="compareStatus4T">
+            Sudut: 0° | Langkah Hisap
+          </div>
+        </div>
+
+        <!-- Kanan: Motor 2 Tak -->
+        <div class="compare-engine-card">
+          <div class="compare-card-head">
+            <h3 style="color:#fb923c;">Motor 2 Tak (2-Stroke)</h3>
+            <span class="cycle-counter-pill" id="powerCount2T">Langkah Usaha: 0x</span>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="compareCanvas2T" class="engine-canvas" width="520" height="480"></canvas>
+          </div>
+          <div style="margin-top:10px; font-size:0.88rem; font-weight:700; color:var(--text-secondary);" id="compareStatus2T">
+            Sudut: 0° | Langkah Kompresi &amp; Hisap Crankcase
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabel Matriks Perbandingan Teknis -->
+      <div class="matrix-table-wrap">
+        <table class="tech-matrix">
+          <thead>
+            <tr>
+              <th style="width:24%;">Parameter Teknis</th>
+              <th style="width:38%; color:#38bdf8;">Motor 4 Tak (4-Stroke)</th>
+              <th style="width:38%; color:#fb923c;">Motor 2 Tak (2-Stroke)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Putaran Poros Engkol per Siklus</strong></td>
+              <td>2 kali putaran penuh (<strong>720°</strong>) untuk 1 kali langkah usaha.</td>
+              <td>1 kali putaran penuh (<strong>360°</strong>) untuk 1 kali langkah usaha.</td>
+            </tr>
+            <tr>
+              <td><strong>Jumlah Langkah Torak</strong></td>
+              <td>4 langkah terpisah: Hisap, Kompresi, Usaha, Buang.</td>
+              <td>2 langkah gabungan: Langkah Naik (Kompresi + Hisap Karter) &amp; Langkah Turun (Usaha + Bilas/Buang).</td>
+            </tr>
+            <tr>
+              <td><strong>Mekanisme Distribusi Gas</strong></td>
+              <td>Menggunakan <strong>katup intake &amp; exhaust</strong> yang digerakkan poros nok (camshaft).</td>
+              <td>Menggunakan <strong>lubang (port)</strong> pada dinding silinder yang dibuka-tutup oleh gerak torak + <em>reed valve</em>.</td>
+            </tr>
+            <tr>
+              <td><strong>Sistem Pelumasan</strong></td>
+              <td>Oli mesin tersirkulasi tertutup dari karter (oil pan) melalui pompa oli; tidak ikut terbakar.</td>
+              <td>Menggunakan <strong>oli samping (2T)</strong> yang dicampur dengan udara &amp; bahan bakar lalu ikut terbakar di ruang bakar.</td>
+            </tr>
+            <tr>
+              <td><strong>Efisiensi &amp; Emisi Gas Buang</strong></td>
+              <td>Pembilasan tuntas, konsumsi bahan bakar lebih irit, emisi gas buang jauh lebih rendah.</td>
+              <td>Terjadi <em>scavenging</em> (pembilasan) yang berisiko meloloskan sebagian gas segar ke knalpot (<em>short-circuiting</em>) &amp; asap lebih tinggi.</td>
+            </tr>
+            <tr>
+              <td><strong>Karakteristik Daya &amp; Konstruksi</strong></td>
+              <td>Konstruksi kepala silinder lebih kompleks, torsi merata dan halus pada putaran rendah hingga tinggi.</td>
+              <td>Konstruksi lebih sederhana dan ringan, rasio daya terhadap kapasitas silinder tinggi pada putaran tinggi.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 3: LAB DIAGNOSTIK GANGGUAN & KUIS UJI KOMPETENSI TKR
+         ====================================================================== -->
+    <section id="view-lab" class="tab-view">
+      <!-- Bagian A: Simulasi Kasus Bengkel -->
+      <div class="lab-section-title">
+        <h2>Bagian A: Simulasi Kasus Diagnostik Bengkel TKR</h2>
+        <span style="font-size:0.85rem; color:var(--text-secondary); font-weight:700;">Amati visual kebocoran/anomali pada kanvas lalu pilih analisis teknis yang tepat</span>
+      </div>
+
+      <div class="case-selector-tabs">
+        <button type="button" class="case-tab-btn active" id="caseTab-0" onclick="selectDiagnosticCase(0)">
+          <strong style="display:block; font-size:0.95rem;">Kasus 1: Motor 4 Tak Sulit Hidup</strong>
+          <span style="font-size:0.82rem;">Tekanan kompresi rendah &amp; tenaga lemah</span>
+        </button>
+        <button type="button" class="case-tab-btn" id="caseTab-1" onclick="selectDiagnosticCase(1)">
+          <strong style="display:block; font-size:0.95rem;">Kasus 2: Motor 2 Tak Berasap Pekat</strong>
+          <span style="font-size:0.82rem;">Asap putih tebal &amp; busi cepat berkerak</span>
+        </button>
+        <button type="button" class="case-tab-btn" id="caseTab-2" onclick="selectDiagnosticCase(2)">
+          <strong style="display:block; font-size:0.95rem;">Kasus 3: Mesin 4 Tak Knocking (Ngelitik)</strong>
+          <span style="font-size:0.82rem;">Suara ketukan logam saat akselerasi</span>
+        </button>
+      </div>
+
+      <div class="case-workspace" id="diagnosticWorkspace"></div>
+
+      <!-- Bagian B: Kuis Uji Kompetensi Visual -->
+      <div class="lab-section-title" style="margin-top:28px;">
+        <h2>Bagian B: Uji Kompetensi Analisis Siklus &amp; Komponen (6 Soal)</h2>
+        <button type="button" class="ctrl-btn" onclick="resetQuizTKR()">↺ Ulangi Kuis</button>
+      </div>
+
+      <div class="quiz-container" id="quizTkrContainer"></div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 4: TENTANG MEDIA (PROFIL, KURIKULUM, PANDUAN & IDENTITAS)
+         ====================================================================== -->
+    <section id="view-about" class="tab-view">
+      <!-- 1. Profil & Tujuan Media -->
+      <div class="about-hero">
+        <h2>Profil &amp; Tujuan Media: Bedah Jeroan Mesin (2 Tak &amp; 4 Tak)</h2>
+        <p>
+          <strong>Bedah Jeroan Mesin: Simulasi Interaktif 2 Tak &amp; 4 Tak</strong> adalah media pembelajaran visual interaktif yang dirancang khusus untuk peserta didik <strong>SMK Konsentrasi Keahlian Teknik Kendaraan Ringan (TKR) – Fase E–F</strong>. Media ini membantu siswa memahami gerak mekanis bagian dalam mesin yang tertutup blok logam, membandingkan siklus 2 langkah dan 4 langkah secara berdampingan, serta melatih penalaran diagnostik gangguan bengkel. Aplikasi dapat digunakan pada <strong>layar panel kelas (IFP/PID)</strong>, proyektor, laptop, maupun perangkat siswa secara <strong>luring (offline-ready)</strong>.
+        </p>
+      </div>
+
+      <div class="about-grid-2">
+        <!-- 2. Keselarasan Kurikulum & Alur Pembelajaran -->
+        <div class="about-card">
+          <h3>2. Keselarasan Kurikulum &amp; Alur Pembelajaran</h3>
+          <ul class="about-list">
+            <li><strong>Komponen &amp; Fungsi:</strong> Mengidentifikasi torak, ring torak, pena torak, batang torak, poros engkol, katup <em>intake/exhaust</em> (4 tak), serta <em>intake/transfer/exhaust port</em> dan <em>reed valve</em> (2 tak).</li>
+            <li><strong>Siklus 4 Langkah &amp; 2 Langkah:</strong> Menghubungkan urutan langkah, posisi <strong>TMA</strong> dan <strong>TMB</strong>, sudut poros engkol (<strong>0°–720°</strong> pada 4 tak; <strong>0°–360°</strong> pada 2 tak), dan mekanisme pembilasan (<em>scavenging</em>).</li>
+            <li><strong>Perbandingan Teknis:</strong> Membandingkan jumlah putaran poros engkol per siklus, mekanisme katup vs lubang bilas, pelumasan oli karter vs oli samping, efisiensi, dan emisi.</li>
+            <li><strong>Diagnostik Gangguan:</strong> Menganalisis kasus bengkel (kompresi bocor pada 4 tak, asap pekat/oli berlebih pada 2 tak, dan <em>knocking</em> akibat waktu pengapian) serta uji kompetensi.</li>
+          </ul>
+
+          <table class="meeting-compact-table" aria-label="Ringkasan 4 Pertemuan Kelas">
+            <thead>
+              <tr>
+                <th style="width:22%;">Pertemuan</th>
+                <th style="width:38%;">Fokus Materi</th>
+                <th style="width:40%;">Aktivitas Media di Kelas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Pertemuan 1</strong></td>
+                <td>Komponen &amp; Siklus 4 Tak</td>
+                <td>Eksplorasi <em>cutaway</em> 4 tak (0°–720°), <em>slider</em> sudut, dan mode sembunyikan label untuk tebak komponen.</td>
+              </tr>
+              <tr>
+                <td><strong>Pertemuan 2</strong></td>
+                <td>Siklus 2 Tak &amp; Pembilasan</td>
+                <td>Mengamati gerak torak membuka/menutup <em>port</em>, aliran bilas <em>crankcase</em>, dan <em>reed valve</em> (0°–360°).</td>
+              </tr>
+              <tr>
+                <td><strong>Pertemuan 3</strong></td>
+                <td>Komparasi 4T vs 2T</td>
+                <td>Menjalankan mode <em>Side-by-Side</em> sinkron, memantau frekuensi langkah usaha, dan mengkaji tabel teknis.</td>
+              </tr>
+              <tr>
+                <td><strong>Pertemuan 4</strong></td>
+                <td>Diagnostik &amp; Evaluasi</td>
+                <td>Menyelesaikan 3 kasus gangguan bengkel dan mengerjakan 6 soal uji kompetensi dengan pembahasan.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3. Panduan Penggunaan & Kode Warna Teknis -->
+        <div class="about-card">
+          <h3>3. Panduan Penggunaan &amp; Kode Warna Teknis</h3>
+          <ul class="about-list">
+            <li><strong>Kontrol Putaran &amp; Sudut:</strong> Gunakan tombol <strong>Putar / Jeda</strong>, <strong>Langkah -15° / +15°</strong>, <strong>Slider Sudut Poros Engkol</strong>, tombol lompat langkah, dan pilihan kecepatan (<strong>0.25x, 0.5x, 1x</strong>) untuk mengamati titik kritis TMA/TMB.</li>
+            <li><strong>Label Komponen &amp; Layar Penuh:</strong> Gunakan <strong>Label Komponen: ON/OFF</strong> untuk presentasi atau kuis lisan di kelas, dan <strong>Layar Penuh</strong> untuk tampilan maksimal di panel IFP/PID atau proyektor.</li>
+            <li><strong>Reset &amp; Evaluasi:</strong> Gunakan tombol <strong>Reset Hitungan Siklus</strong> pada mode perbandingan atau <strong>↺ Ulangi Kuis</strong> pada tab diagnostik &amp; kuis untuk memulai sesi latihan baru.</li>
+          </ul>
+
+          <div class="color-code-grid">
+            <div class="color-code-item">
+              <span class="color-code-swatch" style="background:var(--gas-intake);"></span>
+              <div>
+                <strong style="color:#67e8f9; display:block;">Biru / Cyan</strong>
+                <span>Udara atau campuran udara–bahan bakar segar &amp; saluran bilas (<em>intake/scavenging</em>).</span>
+              </div>
+            </div>
+            <div class="color-code-item">
+              <span class="color-code-swatch" style="background:var(--gas-comp);"></span>
+              <div>
+                <strong style="color:#fcd34d; display:block;">Oranye / Amber</strong>
+                <span>Kompresi / peningkatan tekanan gas saat volume ruang menyempit.</span>
+              </div>
+            </div>
+            <div class="color-code-item">
+              <span class="color-code-swatch" style="background:var(--gas-power);"></span>
+              <div>
+                <strong style="color:#fca5a5; display:block;">Merah</strong>
+                <span>Pembakaran &amp; ekspansi daya (langkah usaha mendorong torak).</span>
+              </div>
+            </div>
+            <div class="color-code-item">
+              <span class="color-code-swatch" style="background:var(--gas-exhaust);"></span>
+              <div>
+                <strong style="color:#cbd5e1; display:block;">Abu-abu</strong>
+                <span>Gas buang (<em>exhaust</em>) hasil pembakaran yang keluar ke saluran buang.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Identitas Pengembang & Catatan Teknis -->
+          <h3 style="margin-top:18px;">4. Identitas Pengembang &amp; Catatan Teknis</h3>
+          <p style="margin:0 0 8px; color:var(--text-secondary); font-size:0.9rem;">
+            Media ini dibangun menggunakan perhitungan kinematika <em>crank-slider</em> 2D berbasis HTML5 Canvas dan JavaScript dalam satu berkas mandiri (<em>offline-ready</em>), sehingga ringan dibuka di browser standar maupun layar sentuh/panel kelas tanpa ketergantungan server eksternal.
+          </p>
+          <div class="dev-credit-strip">
+            <div>
+              <div style="font-size:0.78rem; color:var(--text-secondary); font-weight:700;">PENGEMBANG MEDIA PEMBELAJARAN</div>
+              <div style="font-size:1.05rem; font-weight:800; color:#ffffff;">Mansyur Hidayat</div>
+            </div>
+            <span class="dev-badge">SMK TKR • Single-File Offline HTML5</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       MODAL CP & TP KURIKULUM MERDEKA SMK TKR
+       ======================================================================== -->
+  <div class="modal-overlay" id="cpModal" role="dialog" aria-modal="true" aria-labelledby="cpModalTitle">
+    <div class="modal-dialog">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 id="cpModalTitle">Pemetaan Kurikulum Merdeka – SMK TKR (Fase E–F)</h2>
+        <button type="button" class="util-btn" onclick="closeCpModal()">✕ Tutup</button>
+      </div>
+      <p style="font-size:0.92rem; color:var(--text-secondary); margin-top:0;">
+        Media pembelajaran interaktif ini dirancang untuk mendukung Capaian Pembelajaran Konsentrasi Keahlian <strong>Teknik Kendaraan Ringan (TKR)</strong>:
+      </p>
+      <ul class="cp-list">
+        <li><strong>TP-1 (Identifikasi Komponen):</strong> Peserta didik mampu mengidentifikasi komponen utama mekanisme engkol, kepala silinder, katup, dan saluran bilas pada motor 4 tak dan 2 tak melalui visualisasi <em>cutaway</em>.</li>
+        <li><strong>TP-2 (Analisis Siklus Kerja):</strong> Peserta didik mampu menjelaskan urutan langkah kerja, posisi TMA &amp; TMB, sudut poros engkol (0°–720° pada 4 tak dan 0°–360° pada 2 tak), serta mekanisme pembilasan (<em>scavenging</em>).</li>
+        <li><strong>TP-3 (Komparasi Teknis):</strong> Peserta didik mampu membandingkan prinsip kerja, sistem pelumasan, efisiensi volumetrik, dan karakteristik daya antara motor 4 tak dan 2 tak secara <em>side-by-side</em>.</li>
+        <li><strong>TP-4 (Diagnostik Gangguan):</strong> Peserta didik mampu menganalisis gejala gangguan kompresi, pelumasan 2 tak, dan waktu pengapian (<em>ignition timing</em>) berdasarkan simulasi kasus bengkel.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       STATE GLOBAL APLIKASI
+       ========================================================================== */
+    const state = {
+      activeTab: "sim",
+      showLabels: true,
+
+      // State Tab 1 (Single View)
+      singleEngine: "4T",       // '4T' atau '2T'
+      singleAngle: 45,          // derajat (0..720 untuk 4T, 0..360 untuk 2T)
+      singlePlaying: true,
+      singleSpeed: 0.5,
+
+      // State Tab 2 (Side-by-Side)
+      comparePlaying: true,
+      compareAngle4T: 0,
+      compareAngle2T: 0,
+      powerStrokes4T: 0,
+      powerStrokes2T: 0,
+      prev4TZone: -1,
+      prev2TZone: -1,
+
+      // State Tab 3 (Lab Diagnostik & Kuis)
+      activeCaseIdx: 0,
+      caseAnswered: [null, null, null],
+      quizSelections: {},
+      quizSubmitted: false
+    };
+
+    /* ==========================================================================
+       UTILITAS HEADER & NAVIGASI TAB
+       ========================================================================== */
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      ["sim", "compare", "lab", "about"].forEach(id => {
+        document.getElementById(`tabBtn-${id}`).classList.toggle("active", id === tabId);
+        document.getElementById(`view-${id}`).classList.toggle("active", id === tabId);
+      });
+    }
+
+    function toggleComponentLabels() {
+      state.showLabels = !state.showLabels;
+      const btn = document.getElementById("btnToggleLabels");
+      btn.classList.toggle("active", state.showLabels);
+      document.getElementById("labelToggleText").textContent = state.showLabels
+        ? "Label Komponen: ON"
+        : "Label Komponen: OFF (Mode Tebak)";
+    }
+
+    function openCpModal() {
+      document.getElementById("cpModal").classList.add("open");
+    }
+
+    function closeCpModal() {
+      document.getElementById("cpModal").classList.remove("open");
+    }
+
+    function toggleFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+        } else {
+          document.exitFullscreen();
+        }
+      } catch (e) {
+        // Abaikan jika browser membatasi fullscreen
+      }
+    }
+
+    /* ==========================================================================
+       KONTROL TAB 1 (SIMULASI SIKLUS CUTAWAY)
+       ========================================================================== */
+    function setSingleEngine(type) {
+      state.singleEngine = type;
+      state.singleAngle = 0;
+
+      document.getElementById("btnSelect4T").classList.toggle("active", type === "4T");
+      document.getElementById("btnSelect2T").classList.toggle("active", type === "2T");
+
+      const slider = document.getElementById("singleAngleSlider");
+      slider.max = type === "4T" ? 720 : 360;
+      slider.value = 0;
+
+      document.getElementById("cycleRatioHint").textContent = type === "4T"
+        ? "1 Siklus = 2 Putaran Poros Engkol (720°)"
+        : "1 Siklus = 1 Putaran Poros Engkol (360°)";
+
+      renderStrokePills();
+      updateSingleTelemetry();
+    }
+
+    function toggleSinglePlay() {
+      state.singlePlaying = !state.singlePlaying;
+      const btn = document.getElementById("btnSinglePlay");
+      btn.textContent = state.singlePlaying ? "⏸ Jeda" : "▶ Putar";
+      btn.classList.toggle("paused", !state.singlePlaying);
+    }
+
+    function setSingleSpeed(spd) {
+      state.singleSpeed = spd;
+      ["0.25", "0.5", "1"].forEach(val => {
+        document.getElementById(`spd-${val}`).classList.toggle("active", Number(val) === spd);
+      });
+    }
+
+    function stepSingleAngle(delta) {
+      if (state.singlePlaying) toggleSinglePlay();
+      const maxDeg = state.singleEngine === "4T" ? 720 : 360;
+      state.singleAngle = (state.singleAngle + delta + maxDeg) % maxDeg;
+      document.getElementById("singleAngleSlider").value = Math.round(state.singleAngle);
+      updateSingleTelemetry();
+    }
+
+    function onSingleSliderInput(val) {
+      if (state.singlePlaying) toggleSinglePlay();
+      state.singleAngle = Number(val);
+      updateSingleTelemetry();
+    }
+
+    function jumpToAngle(deg) {
+      if (state.singlePlaying) toggleSinglePlay();
+      state.singleAngle = deg;
+      document.getElementById("singleAngleSlider").value = deg;
+      updateSingleTelemetry();
+    }
+
+    function renderStrokePills() {
+      const container = document.getElementById("strokePillsContainer");
+      if (state.singleEngine === "4T") {
+        container.className = "stroke-pills";
+        container.innerHTML = `
+          <div class="stroke-pill" id="pill4T-0" onclick="jumpToAngle(90)">
+            <strong>1. Hisap</strong>
+            <span>0° – 180°</span>
+          </div>
+          <div class="stroke-pill" id="pill4T-1" onclick="jumpToAngle(270)">
+            <strong>2. Kompresi</strong>
+            <span>180° – 360°</span>
+          </div>
+          <div class="stroke-pill" id="pill4T-2" onclick="jumpToAngle(410)">
+            <strong>3. Usaha</strong>
+            <span>360° – 540°</span>
+          </div>
+          <div class="stroke-pill" id="pill4T-3" onclick="jumpToAngle(630)">
+            <strong>4. Buang</strong>
+            <span>540° – 720°</span>
+          </div>
+        `;
+      } else {
+        container.className = "stroke-pills two-stroke";
+        container.innerHTML = `
+          <div class="stroke-pill" id="pill2T-0" onclick="jumpToAngle(270)">
+            <strong>1. Langkah Naik (TMB ➔ TMA)</strong>
+            <span>Kompresi Silinder &amp; Hisap Crankcase</span>
+          </div>
+          <div class="stroke-pill" id="pill2T-1" onclick="jumpToAngle(90)">
+            <strong>2. Langkah Turun (TMA ➔ TMB)</strong>
+            <span>Usaha, Buang &amp; Bilas (Scavenging)</span>
+          </div>
+        `;
+      }
+    }
+
+    function updateSingleTelemetry() {
+      const deg = Math.round(state.singleAngle);
+      const maxDeg = state.singleEngine === "4T" ? 720 : 360;
+      document.getElementById("singleAngleReadout").textContent = `${deg}° / ${maxDeg}°`;
+      document.getElementById("singleAngleSlider").value = deg;
+
+      if (state.singleEngine === "4T") {
+        // Bersihkan pill aktif
+        for (let i = 0; i < 4; i++) {
+          const el = document.getElementById(`pill4T-${i}`);
+          if (el) el.className = "stroke-pill";
+        }
+
+        if (deg < 180) {
+          document.getElementById("pill4T-0")?.classList.add("active-intake");
+          document.getElementById("telePhaseName").textContent = "1. Langkah Hisap (Intake)";
+          document.getElementById("telePistonDir").textContent = "Turun (TMA ➔ TMB)";
+          document.getElementById("teleValveLabel").textContent = "Status Katup (Valve)";
+          document.getElementById("teleValveStatus").textContent = "Intake: TERBUKA | Exhaust: TERTUTUP";
+          document.getElementById("telePressureText").textContent = "Vakum Ringan (~0.85 bar)";
+          document.getElementById("telePressureBar").style.width = "18%";
+          document.getElementById("phaseExplanationCard").style.borderLeftColor = "var(--gas-intake)";
+          document.getElementById("phaseExpTitle").textContent = "1. Langkah Hisap (0° – 180°)";
+          document.getElementById("phaseExpBody").textContent =
+            "Poros engkol berputar menarik torak turun dari TMA ke TMB. Katup intake terbuka sehingga kevakuman silinder menghisap campuran udara dan bahan bakar segar masuk ke ruang silinder.";
+        } else if (deg < 360) {
+          document.getElementById("pill4T-1")?.classList.add("active-comp");
+          const compProgress = (deg - 180) / 180;
+          const barPct = Math.round(22 + compProgress * 55);
+          document.getElementById("telePhaseName").textContent = "2. Langkah Kompresi";
+          document.getElementById("telePistonDir").textContent = "Naik (TMB ➔ TMA)";
+          document.getElementById("teleValveLabel").textContent = "Status Katup (Valve)";
+          document.getElementById("teleValveStatus").textContent = "Intake: TERTUTUP | Exhaust: TERTUTUP";
+          document.getElementById("telePressureText").textContent = `Meningkat (${(1 + compProgress * 11).toFixed(1)} bar)`;
+          document.getElementById("telePressureBar").style.width = `${barPct}%`;
+          document.getElementById("phaseExplanationCard").style.borderLeftColor = "var(--gas-comp)";
+          document.getElementById("phaseExpTitle").textContent = "2. Langkah Kompresi (180° – 360°)";
+          document.getElementById("phaseExpBody").textContent =
+            "Kedua katup menutup rapat. Torak naik dari TMB menuju TMA memampatkan campuran udara-bahan bakar sehingga tekanan dan suhu naik drastis. Sesaat sebelum 360° (TMA), busi memercikkan bunga api.";
+        } else if (deg < 540) {
+          document.getElementById("pill4T-2")?.classList.add("active-power");
+          const powerDecay = 1 - (deg - 360) / 180;
+          const barPct = Math.round(35 + powerDecay * 65);
+          document.getElementById("telePhaseName").textContent = "3. Langkah Usaha (Power)";
+          document.getElementById("telePistonDir").textContent = "Turun (TMA ➔ TMB)";
+          document.getElementById("teleValveLabel").textContent = "Status Katup (Valve)";
+          document.getElementById("teleValveStatus").textContent = "Intake: TERTUTUP | Exhaust: TERTUTUP";
+          document.getElementById("telePressureText").textContent = `Tinggi / Ekspansi (${(4 + powerDecay * 36).toFixed(1)} bar)`;
+          document.getElementById("telePressureBar").style.width = `${barPct}%`;
+          document.getElementById("phaseExplanationCard").style.borderLeftColor = "var(--gas-power)";
+          document.getElementById("phaseExpTitle").textContent = "3. Langkah Usaha / Ekspansi (360° – 540°)";
+          document.getElementById("phaseExpBody").textContent =
+            "Percikan bunga api busi di sekitar TMA membakar campuran terkompresi. Ledakan pembakaran menghasilkan tekanan tinggi yang mendorong torak turun kuat menuju TMB memutar poros engkol.";
+        } else {
+          document.getElementById("pill4T-3")?.classList.add("active-exhaust");
+          document.getElementById("telePhaseName").textContent = "4. Langkah Buang (Exhaust)";
+          document.getElementById("telePistonDir").textContent = "Naik (TMB ➔ TMA)";
+          document.getElementById("teleValveLabel").textContent = "Status Katup (Valve)";
+          document.getElementById("teleValveStatus").textContent = "Intake: TERTUTUP | Exhaust: TERBUKA";
+          document.getElementById("telePressureText").textContent = "Pembuangan (~1.2 bar)";
+          document.getElementById("telePressureBar").style.width = "24%";
+          document.getElementById("phaseExplanationCard").style.borderLeftColor = "var(--gas-exhaust)";
+          document.getElementById("phaseExpTitle").textContent = "4. Langkah Buang (540° – 720°)";
+          document.getElementById("phaseExpBody").textContent =
+            "Katup exhaust terbuka sementara katup intake tertutup. Torak bergerak naik dari TMB ke TMA mendorong sisa gas hasil pembakaran keluar melalui saluran knalpot.";
+        }
+      } else {
+        // Mode 2 Tak (0..360°, dengan 0° = TMA dan 180° = TMB)
+        const p0 = document.getElementById("pill2T-0");
+        const p1 = document.getElementById("pill2T-1");
+        if (p0) p0.className = "stroke-pill";
+        if (p1) p1.className = "stroke-pill";
+
+        document.getElementById("teleValveLabel").textContent = "Status Lubang (Port)";
+
+        if (deg < 180) {
+          // Langkah Turun (0° TMA -> 180° TMB): Usaha + Exhaust Port buka (~110°) + Transfer Port buka (~125°)
+          if (p1) p1.classList.add("active-power");
+          const isExhaustOpen = deg >= 105;
+          const isTransferOpen = deg >= 122;
+          document.getElementById("telePhaseName").textContent = isTransferOpen
+            ? "Usaha + Bilas (Scavenging)"
+            : isExhaustOpen
+              ? "Usaha + Awal Buang"
+              : "Langkah Usaha (Ekspansi)";
+          document.getElementById("telePistonDir").textContent = "Turun (TMA ➔ TMB)";
+          document.getElementById("teleValveStatus").textContent =
+            `Exh: ${isExhaustOpen ? "BUKA" : "TUTUP"} | Trans: ${isTransferOpen ? "BUKA" : "TUTUP"} | Reed: TUTUP`;
+          const pPct = deg < 105 ? Math.round(95 - (deg / 105) * 55) : 28;
+          document.getElementById("telePressureText").textContent = deg < 105 ? "Tinggi (Ekspansi Daya)" : "Bilas Silinder (~1.4 bar)";
+          document.getElementById("telePressureBar").style.width = `${pPct}%`;
+          document.getElementById("phaseExplanationCard").style.borderLeftColor = isTransferOpen ? "var(--gas-intake)" : "var(--gas-power)";
+          document.getElementById("phaseExpTitle").textContent = "Langkah Turun: Usaha, Buang & Bilas (0° – 180°)";
+          document.getElementById("phaseExpBody").textContent =
+            "Busi memercik di TMA (0°), gas terbakar mendorong torak turun. Pada ~105° bibir atas torak membuka Exhaust Port (gas buang keluar), disusul ~122° membuka Transfer Port sehingga campuran segar dari crankcase membilas sisa gas buang.";
+        } else {
+          // Langkah Naik (180° TMB -> 360° TMA): Bilas berlanjut hingga ~238°, lalu Kompresi + Hisap ke Crankcase
+          if (p0) p0.classList.add("active-comp");
+          const isPortsClosed = deg >= 255;
+          document.getElementById("telePhaseName").textContent = isPortsClosed
+            ? "Kompresi Silinder & Hisap Karter"
+            : "Akhir Pembilasan (Scavenging)";
+          document.getElementById("telePistonDir").textContent = "Naik (TMB ➔ TMA)";
+          document.getElementById("teleValveStatus").textContent =
+            `Exh & Trans: ${isPortsClosed ? "TUTUP" : "MASIH BUKA"} | Reed Valve: ${isPortsClosed ? "BUKA" : "TUTUP"}`;
+          const compPct = isPortsClosed ? Math.round(25 + ((deg - 255) / 105) * 60) : 20;
+          document.getElementById("telePressureText").textContent = isPortsClosed ? "Kompresi Naik + Vakum Karter" : "Tekanan Rendah (~1.1 bar)";
+          document.getElementById("telePressureBar").style.width = `${compPct}%`;
+          document.getElementById("phaseExplanationCard").style.borderLeftColor = "var(--gas-comp)";
+          document.getElementById("phaseExpTitle").textContent = "Langkah Naik: Kompresi Atas & Hisap Bawah (180° – 360°)";
+          document.getElementById("phaseExpBody").textContent =
+            "Torak bergerak naik menutup Transfer Port dan Exhaust Port sehingga campuran segar di atas torak dikompresikan. Bersamaan dengan itu, ruang engkol (crankcase) di bawah torak mengalami kevakuman dan menghisap campuran baru melalui Reed Valve.";
+        }
+      }
+    }
+
+    /* ==========================================================================
+       MESIN RENDER KINEMATIKA POTONGAN (CROSS-SECTION CANVAS) 4 TAK & 2 TAK
+       ========================================================================== */
+    function computePistonY(thetaRad, crankRadius, conRodLength) {
+      // Kinematika slider-crank eksak: x = r*cos(theta) + sqrt(L^2 - (r*sin(theta))^2)
+      // theta = 0 rad -> TMA (posisi tertinggi); theta = PI -> TMB (posisi terendah)
+      const sinT = Math.sin(thetaRad);
+      const cosT = Math.cos(thetaRad);
+      const rodProj = Math.sqrt(Math.max(0, conRodLength * conRodLength - (crankRadius * sinT) ** 2));
+      return crankRadius * cosT + rodProj;
+    }
+
+    function drawEngineCutaway(canvas, options) {
+      const ctx = canvas.getContext("2d");
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const {
+        type,           // '4T' atau '2T'
+        angleDeg,       // 0..720 (4T) atau 0..360 (2T)
+        showLabels,     // boolean
+        faultMode = null // null | 'leak_valve_4T' | 'excess_oil_2T' | 'knock_4T'
+      } = options;
+
+      // Geometri proporsional terhadap ukuran kanvas
+      const cx = W * 0.5;
+      const crankY = H * 0.77;
+      const crankR = H * 0.088;
+      const rodLen = H * 0.245;
+      const pistonH = H * 0.115;
+      const boreW = W * 0.27;
+      const boreHalf = boreW / 2;
+
+      // Posisi puncak piston di TMA & TMB
+      const topDistTMA = crankR + rodLen;
+      const topDistTMB = rodLen - crankR;
+      const yTMA = crankY - topDistTMA;
+      const yTMB = crankY - topDistTMB;
+      const headDeckY = yTMA - H * 0.055; // Plafon ruang bakar
+
+      const thetaRad = (angleDeg * Math.PI) / 180;
+      const pinOffsetFromCrank = computePistonY(thetaRad, crankR, rodLen);
+      const pinY = crankY - pinOffsetFromCrank;
+      const pistonTopY = pinY - pistonH * 0.36;
+      const pistonBotY = pistonTopY + pistonH;
+
+      // Posisi crankpin
+      const crankPinX = cx + crankR * Math.sin(thetaRad);
+      const crankPinY = crankY - crankR * Math.cos(thetaRad);
+
+      // Tentukan status gas & bukaan berdasarkan tipe mesin
+      let chamberColor = "rgba(6, 182, 212, 0.22)";
+      let crankcaseColor = "rgba(30, 41, 59, 0.45)";
+      let sparkActive = false;
+      let intakeValveLift = 0;
+      let exhaustValveLift = 0;
+      let reedValveLift = 0;
+
+      if (type === "4T") {
+        const d = ((angleDeg % 720) + 720) % 720;
+        if (d < 180) {
+          // Hisap
+          intakeValveLift = Math.sin((d / 180) * Math.PI) * (H * 0.026);
+          chamberColor = "rgba(6, 182, 212, 0.34)";
+        } else if (d < 360) {
+          // Kompresi
+          const t = (d - 180) / 180;
+          chamberColor = `rgba(245, 158, 11, ${0.22 + t * 0.48})`;
+          if (faultMode === "knock_4T" && d >= 325 && d <= 345) {
+            sparkActive = true;
+            chamberColor = "rgba(239, 68, 68, 0.72)";
+          } else if (d >= 352) {
+            sparkActive = true;
+          }
+        } else if (d < 540) {
+          // Usaha
+          const t = 1 - (d - 360) / 180;
+          chamberColor = `rgba(239, 68, 68, ${0.24 + t * 0.56})`;
+          if (d <= 372 && faultMode !== "knock_4T") sparkActive = true;
+        } else {
+          // Buang
+          exhaustValveLift = Math.sin(((d - 540) / 180) * Math.PI) * (H * 0.026);
+          chamberColor = "rgba(148, 163, 184, 0.34)";
+        }
+      } else {
+        // Motor 2 Tak (0° = TMA, 180° = TMB)
+        const d = ((angleDeg % 360) + 360) % 360;
+        if (d < 180) {
+          // Langkah Turun: Usaha + Bilas
+          if (d <= 14 || d >= 352) sparkActive = true;
+          if (d < 105) {
+            const t = 1 - d / 105;
+            chamberColor = `rgba(239, 68, 68, ${0.32 + t * 0.48})`;
+            crankcaseColor = `rgba(245, 158, 11, ${0.22 + (d / 105) * 0.32})`; // Kompresi primer crankcase
+          } else if (d < 122) {
+            chamberColor = "rgba(148, 163, 184, 0.36)";
+            crankcaseColor = "rgba(245, 158, 11, 0.52)";
+          } else {
+            // Transfer port terbuka: campuran segar masuk mendorong gas buang
+            chamberColor = "rgba(6, 182, 212, 0.38)";
+            crankcaseColor = "rgba(6, 182, 212, 0.32)";
+          }
+        } else {
+          // Langkah Naik: Akhir Bilas -> Kompresi Silinder & Hisap Crankcase
+          if (d < 255) {
+            chamberColor = "rgba(6, 182, 212, 0.36)";
+            crankcaseColor = "rgba(6, 182, 212, 0.24)";
+          } else {
+            const t = (d - 255) / 105;
+            chamberColor = `rgba(245, 158, 11, ${0.26 + t * 0.46})`;
+            crankcaseColor = "rgba(6, 182, 212, 0.38)";
+            reedValveLift = Math.sin(t * Math.PI) * (H * 0.022);
+            if (d >= 350) sparkActive = true;
+          }
+        }
+      }
+
+      // 1. Gambar Crankcase (Bak Engkol)
+      const ccRadius = crankR * 1.48;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, crankY, ccRadius, 0, Math.PI * 2);
+      ctx.fillStyle = crankcaseColor;
+      ctx.fill();
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = "#475569";
+      ctx.stroke();
+      ctx.restore();
+
+      // 2. Gambar Isi Ruang Bakar & Silinder (di atas torak)
+      ctx.fillStyle = chamberColor;
+      ctx.fillRect(cx - boreHalf, headDeckY, boreW, Math.max(4, pistonTopY - headDeckY));
+
+      // Jika Kasus 2 (2T Berasap Pekat), tampilkan kabut oli berlebih di ruang bakar & knalpot
+      if (faultMode === "excess_oil_2T") {
+        ctx.fillStyle = "rgba(226, 232, 240, 0.35)";
+        ctx.fillRect(cx - boreHalf, headDeckY, boreW, Math.max(4, pistonTopY - headDeckY));
+      }
+
+      // 3. Saluran Khusus 4 Tak vs 2 Tak
+      if (type === "4T") {
+        // Saluran Intake (Kiri atas) & Exhaust (Kanan atas)
+        const portYTop = headDeckY - H * 0.075;
+        // Intake duct
+        ctx.fillStyle = "rgba(6, 182, 212, 0.25)";
+        ctx.beginPath();
+        ctx.moveTo(cx - boreHalf - W * 0.16, portYTop);
+        ctx.lineTo(cx - boreHalf * 0.22, portYTop);
+        ctx.lineTo(cx - boreHalf * 0.22, headDeckY);
+        ctx.lineTo(cx - boreHalf - W * 0.16, portYTop + H * 0.045);
+        ctx.closePath();
+        ctx.fill();
+
+        // Exhaust duct
+        ctx.fillStyle = "rgba(148, 163, 184, 0.25)";
+        ctx.beginPath();
+        ctx.moveTo(cx + boreHalf + W * 0.16, portYTop);
+        ctx.lineTo(cx + boreHalf * 0.22, portYTop);
+        ctx.lineTo(cx + boreHalf * 0.22, headDeckY);
+        ctx.lineTo(cx + boreHalf + W * 0.16, portYTop + H * 0.045);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dinding Kepala Silinder & Blok Silinder
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        // Kiri blok
+        ctx.moveTo(cx - boreHalf, crankY - ccRadius * 0.85);
+        ctx.lineTo(cx - boreHalf, headDeckY);
+        ctx.lineTo(cx - boreHalf - W * 0.16, portYTop + H * 0.045);
+        // Atap kepala silinder
+        ctx.moveTo(cx - boreHalf - W * 0.16, portYTop);
+        ctx.lineTo(cx + boreHalf + W * 0.16, portYTop);
+        // Kanan blok
+        ctx.moveTo(cx + boreHalf + W * 0.16, portYTop + H * 0.045);
+        ctx.lineTo(cx + boreHalf, headDeckY);
+        ctx.lineTo(cx + boreHalf, crankY - ccRadius * 0.85);
+        ctx.stroke();
+
+        // Gambar Katup Intake (Kiri) & Katup Exhaust (Kanan)
+        drawPoppetValve(ctx, cx - boreHalf * 0.44, headDeckY + intakeValveLift, portYTop - H * 0.05, "#38bdf8");
+        const exhColor = faultMode === "leak_valve_4T" ? "#ef4444" : "#cbd5e1";
+        const faultyOffset = faultMode === "leak_valve_4T" ? H * 0.008 : 0; // Katup bocor tidak menutup rapat
+        drawPoppetValve(ctx, cx + boreHalf * 0.44, headDeckY + exhaustValveLift + faultyOffset, portYTop - H * 0.05, exhColor);
+
+        // Visualisasi kebocoran gas saat kompresi pada Kasus 1
+        if (faultMode === "leak_valve_4T" && angleDeg >= 180 && angleDeg <= 360) {
+          ctx.fillStyle = "#f59e0b";
+          for (let i = 0; i < 4; i++) {
+            const lx = cx + boreHalf * 0.55 + ((angleDeg * 1.5 + i * 22) % (W * 0.16));
+            const ly = portYTop + H * 0.02 + Math.sin(i) * 4;
+            ctx.beginPath();
+            ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else {
+        // Saluran 2 Tak:
+        // 1. Intake Port + Reed Valve ke Crankcase (Kiri bawah)
+        const reedY = crankY - ccRadius * 0.35;
+        ctx.fillStyle = "rgba(6, 182, 212, 0.25)";
+        ctx.fillRect(cx - ccRadius - W * 0.14, reedY - H * 0.03, W * 0.15, H * 0.06);
+
+        // 2. Transfer Port (Saluran Bilas di sisi kiri silinder dari crankcase ke tengah silinder)
+        const transferTopY = yTMB - H * 0.015;
+        const transferBotY = yTMB + H * 0.045;
+        ctx.fillStyle = "rgba(6, 182, 212, 0.28)";
+        ctx.beginPath();
+        ctx.moveTo(cx - boreHalf, transferTopY);
+        ctx.lineTo(cx - boreHalf - W * 0.065, transferTopY + H * 0.02);
+        ctx.lineTo(cx - boreHalf - W * 0.065, crankY - ccRadius * 0.65);
+        ctx.lineTo(cx - boreHalf, crankY - ccRadius * 0.65);
+        ctx.lineTo(cx - boreHalf, transferBotY);
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. Exhaust Port (Saluran Buang di sisi kanan silinder, sedikit lebih tinggi dari Transfer Port)
+        const exhaustTopY = yTMB - H * 0.042;
+        const exhaustBotY = yTMB + H * 0.035;
+        ctx.fillStyle = faultMode === "excess_oil_2T" ? "rgba(226, 232, 240, 0.45)" : "rgba(148, 163, 184, 0.28)";
+        ctx.fillRect(cx + boreHalf, exhaustTopY, W * 0.16, exhaustBotY - exhaustTopY);
+
+        // Dinding Silinder 2 Tak (dengan celah port)
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        // Kiri atas sampai transfer port
+        ctx.moveTo(cx - boreHalf, transferTopY);
+        ctx.lineTo(cx - boreHalf, headDeckY);
+        ctx.lineTo(cx + boreHalf, headDeckY);
+        // Kanan atas sampai exhaust port
+        ctx.lineTo(cx + boreHalf, exhaustTopY);
+        // Segmen bawah exhaust port ke crankcase
+        ctx.moveTo(cx + boreHalf, exhaustBotY);
+        ctx.lineTo(cx + boreHalf, crankY - ccRadius * 0.85);
+        // Segmen bawah transfer port ke crankcase
+        ctx.moveTo(cx - boreHalf, transferBotY);
+        ctx.lineTo(cx - boreHalf, crankY - ccRadius * 0.85);
+        ctx.stroke();
+
+        // Gambar Reed Valve (Katup Buluh) di saluran masuk crankcase
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - ccRadius - W * 0.02, reedY - H * 0.025);
+        ctx.lineTo(cx - ccRadius + reedValveLift, reedY + H * 0.015);
+        ctx.stroke();
+
+        // Partikel Aliran Scavenging saat Transfer Port terbuka (pistonTopY > transferTopY)
+        if (pistonTopY > transferTopY) {
+          ctx.fillStyle = "#22d3ee";
+          for (let i = 0; i < 5; i++) {
+            const t = ((angleDeg * 3 + i * 35) % 100) / 100;
+            const px = cx - boreHalf + t * (boreW * 0.75);
+            const py = transferTopY + 10 - Math.sin(t * Math.PI) * (H * 0.06);
+            ctx.beginPath();
+            ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        // Partikel Gas Buang keluar Exhaust Port saat terbuka (pistonTopY > exhaustTopY)
+        if (pistonTopY > exhaustTopY) {
+          ctx.fillStyle = faultMode === "excess_oil_2T" ? "#f8fafc" : "#94a3b8";
+          for (let i = 0; i < 5; i++) {
+            const t = ((angleDeg * 3 + i * 28) % 100) / 100;
+            const px = cx + boreHalf + t * (W * 0.15);
+            const py = (exhaustTopY + exhaustBotY) / 2 + Math.sin(t * 6 + i) * 5;
+            ctx.beginPath();
+            ctx.arc(px, py, faultMode === "excess_oil_2T" ? 6.5 : 4.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // 4. Busi (Spark Plug) di Puncak Ruang Bakar
+      const plugW = W * 0.032;
+      const plugH = H * 0.055;
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fillRect(cx - plugW / 2, headDeckY - plugH, plugW, plugH);
+      ctx.fillStyle = "#475569";
+      ctx.fillRect(cx - plugW * 0.7, headDeckY - plugH * 0.45, plugW * 1.4, plugH * 0.45);
+
+      if (sparkActive) {
+        // Kilatan bunga api busi
+        ctx.save();
+        ctx.fillStyle = "#fef08a";
+        ctx.shadowColor = "#f59e0b";
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.arc(cx, headDeckY + 8, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 5. Batang Torak (Connecting Rod)
+      ctx.save();
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = W * 0.034;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx, pinY);
+      ctx.lineTo(crankPinX, crankPinY);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = W * 0.014;
+      ctx.beginPath();
+      ctx.moveTo(cx, pinY);
+      ctx.lineTo(crankPinX, crankPinY);
+      ctx.stroke();
+      ctx.restore();
+
+      // 6. Torak (Piston) & Ring Torak
+      const pLeft = cx - boreHalf + 4;
+      const pWidth = boreW - 8;
+      const pGrad = ctx.createLinearGradient(pLeft, pistonTopY, pLeft + pWidth, pistonTopY);
+      pGrad.addColorStop(0, "#94a3b8");
+      pGrad.addColorStop(0.5, "#e2e8f0");
+      pGrad.addColorStop(1, "#64748b");
+      ctx.fillStyle = pGrad;
+      ctx.beginPath();
+      ctx.roundRect(pLeft, pistonTopY, pWidth, pistonH, 6);
+      ctx.fill();
+
+      // Ring Torak (2 Ring Kompresi + 1 Ring Oli)
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 2.5;
+      [0.14, 0.24, 0.34].forEach(ratio => {
+        const ry = pistonTopY + pistonH * ratio;
+        ctx.beginPath();
+        ctx.moveTo(pLeft, ry);
+        ctx.lineTo(pLeft + pWidth, ry);
+        ctx.stroke();
+      });
+
+      // Pena Torak (Piston Pin)
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(cx, pinY, W * 0.022, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#f97316";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // 7. Poros Engkol (Crankshaft & Counterweight)
+      ctx.save();
+      ctx.translate(cx, crankY);
+      ctx.rotate(thetaRad);
+      // Crank web / counterweight
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.arc(0, 0, crankR * 1.18, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.lineTo(0, -crankR);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      // Main Journal (Sumbu Utama Poros Engkol)
+      ctx.fillStyle = "#e2e8f0";
+      ctx.beginPath();
+      ctx.arc(cx, crankY, W * 0.028, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Crankpin
+      ctx.fillStyle = "#f97316";
+      ctx.beginPath();
+      ctx.arc(crankPinX, crankPinY, W * 0.022, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 8. Garis Referensi TMA & TMB
+      drawReferenceLine(ctx, cx - boreHalf - 28, cx + boreHalf + 28, yTMA, "TMA", "#38bdf8");
+      drawReferenceLine(ctx, cx - boreHalf - 28, cx + boreHalf + 28, yTMB, "TMB", "#fb923c");
+
+      // 9. Label Komponen Teknis (Jika Mode Label ON)
+      if (showLabels) {
+        drawCalloutLabel(ctx, cx + plugW * 0.8, headDeckY - plugH * 0.65, cx + boreHalf + 52, headDeckY - plugH * 0.7, "Busi (Spark Plug)");
+        drawCalloutLabel(ctx, pLeft + pWidth, pistonTopY + pistonH * 0.22, cx + boreHalf + 48, pistonTopY + pistonH * 0.15, "Torak & Ring");
+        drawCalloutLabel(ctx, (cx + crankPinX) / 2, (pinY + crankPinY) / 2, cx + boreHalf + 48, (pinY + crankPinY) / 2, "Batang Torak");
+        drawCalloutLabel(ctx, cx + W * 0.03, crankY, cx + boreHalf + 48, crankY + 14, "Poros Engkol");
+
+        if (type === "4T") {
+          drawCalloutLabel(ctx, cx - boreHalf * 0.44, headDeckY - H * 0.06, 16, headDeckY - H * 0.09, "Katup Intake", true);
+          drawCalloutLabel(ctx, cx + boreHalf * 0.44, headDeckY - H * 0.06, W - 16, headDeckY - H * 0.09, "Katup Exhaust", false);
+        } else {
+          drawCalloutLabel(ctx, cx - boreHalf - W * 0.05, yTMB, 14, yTMB - 16, "Transfer Port", true);
+          drawCalloutLabel(ctx, cx + boreHalf + W * 0.08, yTMB, W - 14, yTMB - 16, "Exhaust Port", false);
+          drawCalloutLabel(ctx, cx - ccRadius - W * 0.05, crankY - ccRadius * 0.35, 14, crankY - ccRadius * 0.25, "Reed Valve", true);
+        }
+      }
+    }
+
+    function drawPoppetValve(ctx, x, headY, stemTopY, color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x, stemTopY);
+      ctx.lineTo(x, headY);
+      ctx.stroke();
+
+      // Piringan katup
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x - 16, headY);
+      ctx.lineTo(x + 16, headY);
+      ctx.lineTo(x + 11, headY - 6);
+      ctx.lineTo(x - 11, headY - 6);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawReferenceLine(ctx, x1, x2, y, text, color) {
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x1, y);
+      ctx.lineTo(x2, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = color;
+      ctx.font = "bold 11px ui-monospace, monospace";
+      ctx.fillText(text, x1 - 24, y + 4);
+      ctx.restore();
+    }
+
+    function drawCalloutLabel(ctx, targetX, targetY, labelX, labelY, text, alignLeft = false) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.75)";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(targetX, targetY);
+      ctx.lineTo(labelX, labelY);
+      ctx.stroke();
+
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = "bold 11.5px system-ui, sans-serif";
+      ctx.fillStyle = "#f8fafc";
+      ctx.textAlign = alignLeft ? "left" : (labelX > targetX ? "left" : "right");
+      if (labelX > ctx.canvas.width - 90) ctx.textAlign = "right";
+      ctx.fillText(text, labelX, labelY - 4);
+      ctx.restore();
+    }
+
+    /* ==========================================================================
+       KONTROL TAB 2 (PERBANDINGAN SIDE-BY-SIDE)
+       ========================================================================== */
+    function toggleComparePlay() {
+      state.comparePlaying = !state.comparePlaying;
+      const btn = document.getElementById("btnComparePlay");
+      btn.textContent = state.comparePlaying ? "⏸ Jeda" : "▶ Putar";
+      btn.classList.toggle("paused", !state.comparePlaying);
+    }
+
+    function resetCompareCounters() {
+      state.compareAngle4T = 0;
+      state.compareAngle2T = 0;
+      state.powerStrokes4T = 0;
+      state.powerStrokes2T = 0;
+      state.prev4TZone = -1;
+      state.prev2TZone = -1;
+      document.getElementById("powerCount4T").textContent = "Langkah Usaha: 0x";
+      document.getElementById("powerCount2T").textContent = "Langkah Usaha: 0x";
+    }
+
+    function updateCompareTelemetry() {
+      const d4 = Math.round(state.compareAngle4T);
+      const d2 = Math.round(state.compareAngle2T);
+
+      // Hitung frekuensi langkah usaha saat melewati titik pembakaran
+      const zone4 = d4 >= 360 && d4 < 540 ? 1 : 0;
+      if (zone4 === 1 && state.prev4TZone === 0) {
+        state.powerStrokes4T += 1;
+        document.getElementById("powerCount4T").textContent = `Langkah Usaha: ${state.powerStrokes4T}x`;
+      }
+      state.prev4TZone = zone4;
+
+      const zone2 = d2 >= 0 && d2 < 120 ? 1 : 0;
+      if (zone2 === 1 && state.prev2TZone === 0) {
+        state.powerStrokes2T += 1;
+        document.getElementById("powerCount2T").textContent = `Langkah Usaha: ${state.powerStrokes2T}x`;
+      }
+      state.prev2TZone = zone2;
+
+      const phase4Text = d4 < 180 ? "Hisap" : d4 < 360 ? "Kompresi" : d4 < 540 ? "USAHA (Daya)" : "Buang";
+      const phase2Text = d2 < 180 ? "USAHA + Bilas (Turun)" : "Kompresi + Hisap Karter (Naik)";
+
+      document.getElementById("compareStatus4T").textContent = `Sudut: ${d4}° / 720° | Fase: ${phase4Text}`;
+      document.getElementById("compareStatus2T").textContent = `Sudut: ${d2}° / 360° | Fase: ${phase2Text}`;
+    }
+
+    /* ==========================================================================
+       TAB 3: DATA & LOGIKA LAB DIAGNOSTIK GANGGUAN + KUIS UJI KOMPETENSI
+       ========================================================================== */
+    const DIAGNOSTIC_CASES = [
+      {
+        title: "Kasus 1: Mesin 4 Tak Sulit Hidup & Tenaga Sangat Lemah",
+        engineType: "4T",
+        faultMode: "leak_valve_4T",
+        symptom: "Gejala Bengkel: Motor 4 tak susah distarter, putaran stasioner tidak stabil, dan hasil uji compression tester hanya terbaca 5,5 bar (standar 11–13 bar). Perhatikan aliran partikel oranye di dekat katup kanan pada kanvas.",
+        question: "Berdasarkan simulasi visual di samping, apa akar masalah yang terjadi dan tindakan perbaikan yang tepat?",
+        options: [
+          {
+            text: "Katup buang (exhaust valve) bocor / tidak menutup rapat akibat kerak karbon atau penyetelan celah katup terlalu rapat → Lakukan penyetelan celah katup dan skir katup (valve lapping).",
+            correct: true,
+            explanation: "Tepat! Saat langkah kompresi (180°–360°), kedua katup seharusnya menutup rapat. Terlihat gas bertekanan lolos melalui celah katup exhaust yang tidak menutup sempurna."
+          },
+          {
+            text: "Reed valve pada bak engkol robek sehingga campuran bocor kembali ke karburator → Ganti membran reed valve.",
+            correct: false,
+            explanation: "Kurang tepat. Reed valve adalah komponen sistem pemasukan pada motor 2 tak, bukan mekanisme kepala silinder motor 4 tak."
+          },
+          {
+            text: "Saluran transfer port tersumbat kerak oli samping → Bersihkan lubang bilas silinder.",
+            correct: false,
+            explanation: "Kurang tepat. Transfer port hanya terdapat pada silinder motor 2 tak, sedangkan simulasi ini menampilkan mekanisme katup motor 4 tak."
+          }
+        ]
+      },
+      {
+        title: "Kasus 2: Motor 2 Tak Mengeluarkan Asap Putih Pekat & Busi Cepat Mati",
+        engineType: "2T",
+        faultMode: "excess_oil_2T",
+        symptom: "Gejala Bengkel: Knalpot motor 2 tak mengeluarkan asap putih tebal berlebihan, ujung busi basah kehitaman (fouling), dan akselerasi terasa berat.",
+        question: "Apa analisis teknis paling logis untuk gejala gangguan pada motor 2 tak tersebut?",
+        options: [
+          {
+            text: "Celah katup intake terlalu longgar sehingga oli mesin turun ke ruang bakar → Setel ulang celah katup.",
+            correct: false,
+            explanation: "Kurang tepat. Motor 2 tak menggunakan sistem lubang (port) pada dinding silinder dan tidak memiliki katup intake/exhaust di kepala silinder."
+          },
+          {
+            text: "Setelan pompa oli samping (autolube) terlalu boros atau seal poros engkol sisi kopling bocor → Kalibrasi ulang stroke pompa oli samping & periksa seal kruk as.",
+            correct: true,
+            explanation: "Benar sekali! Pada motor 2 tak, oli samping ikut terbakar bersama campuran bahan bakar. Jika suplai oli berlebih atau oli transmisi masuk lewat seal kruk as, asap menjadi pekat dan busi cepat berkerak."
+          },
+          {
+            text: "Busi memercikkan api pada langkah buang (540°–720°) → Ubah posisi camshaft.",
+            correct: false,
+            explanation: "Kurang tepat. Siklus motor 2 tak hanya berlangsung 1 putaran poros engkol (0°–360°), bukan 720°."
+          }
+        ]
+      },
+      {
+        title: "Kasus 3: Timbul Suara Knocking (Ngelitik) Saat Mesin 4 Tak Akselerasi",
+        engineType: "4T",
+        faultMode: "knock_4T",
+        symptom: "Gejala Bengkel: Saat gas dibuka mendadak atau menanjak, terdengar bunyi ketukan logam nyaring dari ruang bakar. Perhatikan momen nyala api busi pada kanvas.",
+        question: "Mengapa fenomena knocking tersebut terjadi ditinjau dari siklus langkah kompresi dan usaha?",
+        options: [
+          {
+            text: "Waktu pengapian (ignition timing) terlalu maju sebelum TMA atau oktan bahan bakar terlalu rendah sehingga tekanan puncak menekan torak yang masih bergerak naik → Periksa timing pengapian & gunakan BBM sesuai rasio kompresi.",
+            correct: true,
+            explanation: "Analisis tepat! Pembakaran yang terjadi terlalu dini sebelum torak mencapai TMA menimbulkan gelombang tekanan balik melawan gerakan torak yang sedang naik."
+          },
+          {
+            text: "Katup exhaust terbuka saat langkah hisap sehingga gas buang masuk kembali → Ganti pegas katup.",
+            correct: false,
+            explanation: "Kurang tepat. Gejala tersebut tidak sesuai dengan visual nyala api dini sebelum TMA pada langkah kompresi."
+          },
+          {
+            text: "Torak tidak bergerak dari TMA ke TMB karena poros engkol terkunci → Ganti batang torak.",
+            correct: false,
+            explanation: "Kurang tepat. Pada simulasi terlihat mekanisme engkol tetap berputar normal, namun penyalaan terjadi terlalu awal."
+          }
+        ]
+      }
+    ];
+
+    const TKR_QUIZ_QUESTIONS = [
+      {
+        q: "1. Pada motor bakar 4 tak, berapa derajat putaran poros engkol yang dibutuhkan untuk menyelesaikan satu siklus penuh (Hisap – Kompresi – Usaha – Buang)?",
+        options: ["180° (0,5 putaran)", "360° (1 putaran)", "540° (1,5 putaran)", "720° (2 putaran penuh)"],
+        answer: 3,
+        rationale: "Setiap langkah torak (TMA ke TMB atau sebaliknya) menempuh 180° putaran poros engkol. Empat langkah membutuhkan 4 × 180° = 720° (2 putaran penuh)."
+      },
+      {
+        q: "2. Pada rentang sudut 180° – 360° siklus motor 4 tak, bagaimana posisi kedua katup dan arah gerak torak?",
+        options: [
+          "Katup intake terbuka, torak turun dari TMA ke TMB",
+          "Kedua katup tertutup rapat, torak naik dari TMB menuju TMA",
+          "Katup exhaust terbuka, torak naik dari TMB menuju TMA",
+          "Kedua katup terbuka bersamaan, torak diam di TMA"
+        ],
+        answer: 1,
+        rationale: "Rentang 180° – 360° adalah Langkah Kompresi: kedua katup menutup rapat sementara torak naik memampatkan campuran udara dan bahan bakar."
+      },
+      {
+        q: "3. Apa fungsi utama proses pembilasan (scavenging) pada motor 2 tak?",
+        options: [
+          "Mendinginkan oli di dalam karter bawah",
+          "Mendorong sisa gas buang keluar melalui exhaust port menggunakan campuran gas segar dari crankcase",
+          "Menggerakkan poros nok (camshaft) agar katup membuka",
+          "Menahan tekanan pembakaran agar torak tidak turun ke TMB"
+        ],
+        answer: 1,
+        rationale: "Saat torak mendekati TMB, transfer port terbuka sehingga campuran segar bertekanan dari crankcase masuk membilas dan mendorong sisa gas buang keluar lewat exhaust port."
+      },
+      {
+        q: "4. Pada motor 2 tak, apa yang terjadi di dalam ruang engkol (crankcase) saat torak bergerak naik dari TMB menuju TMA?",
+        options: [
+          "Terjadi pembuangan asap knalpot melalui crankcase",
+          "Terjadi pembakaran campuran bahan bakar di dalam crankcase",
+          "Terjadi kevakuman sehingga campuran udara–BB–oli samping terhisap masuk melalui reed valve",
+          "Tekanan crankcase meningkat drastis untuk menekan ring oli"
+        ],
+        answer: 2,
+        rationale: "Ketika torak bergerak naik ke TMA, volume ruang engkol membesar sehingga timbul kevakuman yang membuka reed valve dan menghisap campuran segar ke crankcase."
+      },
+      {
+        q: "5. Mengapa emisi gas buang hidrokarbon (HC) pada motor 2 tak konvensional cenderung lebih tinggi dibandingkan motor 4 tak?",
+        options: [
+          "Karena motor 2 tak memiliki 4 buah katup di kepala silinder",
+          "Karena oli samping ikut terbakar dan sebagian campuran segar ikut lolos saat pembilasan (short-circuiting)",
+          "Karena poros engkol motor 2 tak berputar dua kali lebih lambat",
+          "Karena motor 2 tak tidak menggunakan busi untuk penyalaan"
+        ],
+        answer: 1,
+        rationale: "Pada proses scavenging 2 tak, lubang transfer dan exhaust terbuka bersamaan sesaat sehingga sebagian kecil campuran segar dapat ikut terbuang bersama pembakaran oli samping."
+      },
+      {
+        q: "6. Jika hasil pengukuran compression tester pada silinder motor 4 tak berada jauh di bawah spesifikasi standar, komponen manakah yang paling relevan diperiksa pertama kali?",
+        options: [
+          "Kerapatan dudukan katup (intake/exhaust), keausan ring torak, dan paking kepala silinder",
+          "Membran reed valve dan setelan pompa oli samping",
+          "Saringan udara luar dan tutup tangki bahan bakar",
+          "Kabel speedometer dan sensor kecepatan roda"
+        ],
+        answer: 0,
+        rationale: "Kebocoran kompresi pada motor 4 tak umumnya bersumber dari katup yang tidak menutup rapat, ring torak/dinding silinder aus, atau paking kepala silinder bocor."
+      }
+    ];
+
+    function selectDiagnosticCase(idx) {
+      state.activeCaseIdx = idx;
+      [0, 1, 2].forEach(i => {
+        document.getElementById(`caseTab-${i}`).classList.toggle("active", i === idx);
+      });
+      renderDiagnosticCase();
+    }
+
+    function renderDiagnosticCase() {
+      const idx = state.activeCaseIdx;
+      const item = DIAGNOSTIC_CASES[idx];
+      const chosenIdx = state.caseAnswered[idx];
+
+      const optionsHtml = item.options.map((opt, optIdx) => {
+        let cls = "diag-option-btn";
+        if (chosenIdx !== null) {
+          if (opt.correct) cls += " correct";
+          else if (chosenIdx === optIdx) cls += " wrong";
+        }
+        return `
+          <button type="button" class="${cls}" onclick="answerDiagnosticCase(${optIdx})">
+            <span style="font-weight:900; color:var(--accent-cyan);">${String.fromCharCode(65 + optIdx)}.</span>
+            <span>${opt.text}</span>
+          </button>
+        `;
+      }).join("");
+
+      let feedbackHtml = "";
+      if (chosenIdx !== null) {
+        const picked = item.options[chosenIdx];
+        feedbackHtml = `
+          <div class="diag-feedback ${picked.correct ? "ok" : "err"}">
+            <strong>${picked.correct ? "✓ Diagnosis Tepat:" : "⚠ Perlu Ditinjau Kembali:"}</strong>
+            ${picked.explanation}
+          </div>
+        `;
+      }
+
+      document.getElementById("diagnosticWorkspace").innerHTML = `
+        <div>
+          <div class="canvas-wrapper">
+            <canvas id="diagCanvas" class="engine-canvas" width="480" height="460"></canvas>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin:0 0 10px; font-size:1.15rem; color:#ffffff;">${item.title}</h3>
+          <div class="symptom-alert">
+            <strong>Observasi Gejala &amp; Visual:</strong>
+            <span style="font-size:0.9rem; color:#e2e8f0;">${item.symptom}</span>
+          </div>
+          <p style="font-weight:800; margin:0 0 10px; color:#38bdf8;">${item.question}</p>
+          <div>${optionsHtml}</div>
+          ${feedbackHtml}
+        </div>
+      `;
+    }
+
+    function answerDiagnosticCase(optIdx) {
+      state.caseAnswered[state.activeCaseIdx] = optIdx;
+      renderDiagnosticCase();
+    }
+
+    function renderQuizTKR() {
+      const container = document.getElementById("quizTkrContainer");
+      let correctTotal = 0;
+
+      const itemsHtml = TKR_QUIZ_QUESTIONS.map((item, qIdx) => {
+        const userPick = state.quizSelections[qIdx];
+        if (state.quizSubmitted && userPick === item.answer) correctTotal += 1;
+
+        const choicesHtml = item.options.map((optText, cIdx) => {
+          let cls = "quiz-choice-label";
+          if (state.quizSubmitted) {
+            if (cIdx === item.answer) cls += " eval-correct";
+            else if (userPick === cIdx) cls += " eval-wrong";
+          } else if (userPick === cIdx) {
+            cls += " selected";
+          }
+
+          return `
+            <label class="${cls}" onclick="pickQuizOption(${qIdx}, ${cIdx})">
+              <input type="radio" name="tkr_q_${qIdx}" ${userPick === cIdx ? "checked" : ""} style="accent-color:var(--accent-cyan);" />
+              <span>${optText}</span>
+            </label>
+          `;
+        }).join("");
+
+        const rationaleHtml = state.quizSubmitted
+          ? `<div class="quiz-rationale"><strong>Pembahasan:</strong> ${item.rationale}</div>`
+          : "";
+
+        return `
+          <div class="quiz-item-card">
+            <h4>${item.q}</h4>
+            <div class="quiz-choices-grid">${choicesHtml}</div>
+            ${rationaleHtml}
+          </div>
+        `;
+      }).join("");
+
+      const scorePct = Math.round((correctTotal / TKR_QUIZ_QUESTIONS.length) * 100);
+      const footerHtml = state.quizSubmitted
+        ? `
+          <div class="score-summary-box">
+            <div>
+              <div style="font-size:0.85rem; color:var(--text-secondary); font-weight:700;">HASIL UJI KOMPETENSI TKR</div>
+              <div style="font-size:1.5rem; font-weight:900; color:#38bdf8;">
+                Skor: ${scorePct} / 100 <span style="font-size:0.95rem; color:#e2e8f0;">(${correctTotal} dari ${TKR_QUIZ_QUESTIONS.length} soal benar)</span>
+              </div>
+            </div>
+            <button type="button" class="ctrl-btn primary-play" onclick="resetQuizTKR()">↺ Kerjakan Ulang</button>
+          </div>
+        `
+        : `
+          <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+            <button type="button" class="ctrl-btn primary-play" style="padding:12px 24px; font-size:0.98rem;" onclick="submitQuizTKR()">
+              ✓ Periksa Jawaban &amp; Lihat Skor
+            </button>
+          </div>
+        `;
+
+      container.innerHTML = itemsHtml + footerHtml;
+    }
+
+    function pickQuizOption(qIdx, cIdx) {
+      if (state.quizSubmitted) return;
+      state.quizSelections[qIdx] = cIdx;
+      renderQuizTKR();
+    }
+
+    function submitQuizTKR() {
+      state.quizSubmitted = true;
+      renderQuizTKR();
+    }
+
+    function resetQuizTKR() {
+      state.quizSelections = {};
+      state.quizSubmitted = false;
+      renderQuizTKR();
+    }
+
+    /* ==========================================================================
+       LOOP ANIMASI UTAMA (REQUESTANIMATIONFRAME)
+       ========================================================================== */
+    let lastTimestamp = 0;
+
+    function mainAnimationLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+      lastTimestamp = timestamp;
+
+      // 1. Update & Gambar Tab 1 (Single View)
+      if (state.activeTab === "sim") {
+        if (state.singlePlaying) {
+          const maxDeg = state.singleEngine === "4T" ? 720 : 360;
+          const degPerSec = 180 * state.singleSpeed; // 180 deg/detik pada kecepatan 1x
+          state.singleAngle = (state.singleAngle + degPerSec * dt) % maxDeg;
+          updateSingleTelemetry();
+        }
+        const singleCanvas = document.getElementById("singleEngineCanvas");
+        if (singleCanvas) {
+          drawEngineCutaway(singleCanvas, {
+            type: state.singleEngine,
+            angleDeg: state.singleAngle,
+            showLabels: state.showLabels
+          });
+        }
+      }
+
+      // 2. Update & Gambar Tab 2 (Side-by-Side)
+      if (state.activeTab === "compare") {
+        if (state.comparePlaying) {
+          const degPerSec = 120; // Kecepatan sudut identik pada kedua mesin
+          state.compareAngle4T = (state.compareAngle4T + degPerSec * dt) % 720;
+          state.compareAngle2T = (state.compareAngle2T + degPerSec * dt) % 360;
+          updateCompareTelemetry();
+        }
+        const c4 = document.getElementById("compareCanvas4T");
+        const c2 = document.getElementById("compareCanvas2T");
+        if (c4 && c2) {
+          drawEngineCutaway(c4, {
+            type: "4T",
+            angleDeg: state.compareAngle4T,
+            showLabels: state.showLabels
+          });
+          drawEngineCutaway(c2, {
+            type: "2T",
+            angleDeg: state.compareAngle2T,
+            showLabels: state.showLabels
+          });
+        }
+      }
+
+      // 3. Gambar Kanvas Diagnostik di Tab 3
+      if (state.activeTab === "lab") {
+        const diagCanvas = document.getElementById("diagCanvas");
+        if (diagCanvas) {
+          const activeCase = DIAGNOSTIC_CASES[state.activeCaseIdx];
+          const maxDeg = activeCase.engineType === "4T" ? 720 : 360;
+          const animDeg = ((timestamp / 1000) * 90) % maxDeg;
+          drawEngineCutaway(diagCanvas, {
+            type: activeCase.engineType,
+            angleDeg: animDeg,
+            showLabels: state.showLabels,
+            faultMode: activeCase.faultMode
+          });
+        }
+      }
+
+      requestAnimationFrame(mainAnimationLoop);
+    }
+
+    /* ==========================================================================
+       INISIALISASI SAAT HALAMAN SIAP
+       ========================================================================== */
+    window.onload = function () {
+      renderStrokePills();
+      updateSingleTelemetry();
+      renderDiagnosticCase();
+      renderQuizTKR();
+      requestAnimationFrame(mainAnimationLoop);
+    };
+  </script>
+</body>
+</html>```
